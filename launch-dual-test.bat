@@ -47,16 +47,16 @@ for /d %%D in ("%APPDATA_SYX%\mods\*") do (
 set "CP=!CP!;%GAME_JAR%"
 set "JVM_COMMON=-Xmx4G -Dfile.encoding=UTF-8"
 
-echo [LAUNCH] Starting Instance 1 (HOST on 127.0.0.1:27015)...
+echo [LAUNCH] Starting Instance 1 (HOST on 127.0.0.1:27025)...
 echo          Log: "%LOG_DIR%\coop-host.log"
-start "Songs of Syx - COOP HOST" /D "%GAME_DIR%" cmd /c ""%JAVA_EXE%" %JVM_COMMON% -Dcoop.testRole=HOST -Dcoop.port=27015 -cp "!CP!" init.MainProcess > "%LOG_DIR%\coop-host.log" 2>&1"
+start "Songs of Syx - COOP HOST" /D "%GAME_DIR%" cmd /c ""%JAVA_EXE%" %JVM_COMMON% -Dcoop.testRole=HOST -Dcoop.port=27025 -cp "!CP!" init.MainProcess > "%LOG_DIR%\coop-host.log" 2>&1"
 
-:: Brief pause so Host binds port 27015 and finishes file checks first
+:: Brief pause so Host binds port 27025 and finishes file checks first
 ping -n 4 127.0.0.1 >nul
 
-echo [LAUNCH] Starting Instance 2 (CLIENT to 127.0.0.1:27015, isolated save folder: saves_client)...
+echo [LAUNCH] Starting Instance 2 (CLIENT to 127.0.0.1:27025, isolated save folder: saves_client)...
 echo          Log: "%LOG_DIR%\coop-client.log"
-start "Songs of Syx - COOP CLIENT" /D "%GAME_DIR%" cmd /c ""%JAVA_EXE%" %JVM_COMMON% -Dcoop.testRole=CLIENT -Dcoop.connect=127.0.0.1:27015 -Dcoop.saveFolder=saves_client -cp "!CP!" init.MainProcess > "%LOG_DIR%\coop-client.log" 2>&1"
+start "Songs of Syx - COOP CLIENT" /D "%GAME_DIR%" cmd /c ""%JAVA_EXE%" %JVM_COMMON% -Dcoop.testRole=CLIENT -Dcoop.connect=127.0.0.1:27025 -Dcoop.saveFolder=saves_client -cp "!CP!" init.MainProcess > "%LOG_DIR%\coop-client.log" 2>&1"
 
 echo [DONE] Both Host and Client instances are running.
 echo        Have your coding agent inspect "%LOG_DIR%\coop-host.log" and "%LOG_DIR%\coop-client.log" after testing.

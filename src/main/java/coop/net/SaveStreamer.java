@@ -22,9 +22,10 @@ public class SaveStreamer {
 
     public static final int CHUNK_SIZE = 32 * 1024; // 32 KB
 
-    public static final byte TYPE_SAVE_START = 0x53; // 'S'
-    public static final byte TYPE_SAVE_CHUNK = 0x43; // 'C'
-    public static final byte TYPE_SAVE_END   = 0x45; // 'E'
+    public static final byte TYPE_SAVE_START   = 0x53; // 'S'
+    public static final byte TYPE_SAVE_CHUNK   = 0x43; // 'C'
+    public static final byte TYPE_SAVE_END     = 0x45; // 'E'
+    public static final byte TYPE_SAVE_REQUEST = 0x52; // 'R'
 
     public interface SaveTransferCallback {
         void onSaveReceived(Path savedFile);
@@ -231,6 +232,19 @@ public class SaveStreamer {
             }
         }
 
+        public int getReceivedCount() {
+            return receivedCount;
+        }
+
+        public int getExpectedChunks() {
+            return expectedChunks;
+        }
+
+        public int getProgressPercent() {
+            if (expectedChunks <= 0) return 0;
+            return (int) ((receivedCount * 100L) / expectedChunks);
+        }
+
         public void cleanupTempFile() {
             if (raf != null) {
                 try {
@@ -250,15 +264,27 @@ public class SaveStreamer {
     /**
      * In-game helper: On Host, pauses game speed, saves "__coop_sync", and streams save file to connected peers.
      */
-    public static void hostSaveAndStream(CoopTransport transport) {
+    public static void hostSaveAndStream(final CoopTransport transport) {
         try {
             // Pause simulation deterministically
             if (game.GAME.SPEED != null) {
                 game.GAME.SPEED.speedSet(0);
             }
-            Path savePath = game.GAME.saver().save("__coop_sync", true);
+            final Path savePath = game.GAME.saver().save("__coop_sync", true);
             if (savePath != null && Files.exists(savePath)) {
-                streamFile(savePath, transport);
+                new Thread(new Runnable() {
+                    @Override
+                    public void run() {
+                        try {
+                            System.out.println("[SaveStreamer] Streaming save file to peers: " + savePath);
+                            streamFile(savePath, transport);
+                            System.out.println("[SaveStreamer] Save streaming complete.");
+                        } catch (IOException e) {
+                            System.err.println("[SaveStreamer] Failed streaming save file: " + e.getMessage());
+                            e.printStackTrace();
+                        }
+                    }
+                }, "Coop-SaveStreamer-Worker").start();
             } else {
                 System.err.println("[SaveStreamer] Failed to generate __coop_sync save file.");
             }

@@ -15,38 +15,54 @@ import snake2d.util.gui.GuiSection;
 import snake2d.util.gui.renderable.RENDEROBJ;
 import snake2d.util.misc.ACTION;
 import util.colors.GCOLOR;
+import util.gui.misc.GBox;
 import util.gui.misc.GButt;
 import util.gui.panel.GPanel;
+import view.interrupter.Interrupter;
+import view.keyboard.KEYS;
+import view.main.VIEW;
 
 /**
  * In-game modal overlay for inspecting and managing the multiplayer co-op session.
- * Toggled via the HUD pill or F8 shortcut.
+ * Managed as a top-level Interrupter so it renders above all settlement/world layers.
  */
-public class CoopOverlayDialog {
+public class CoopOverlayDialog extends Interrupter {
 
-    private static final CoopOverlayDialog INSTANCE = new CoopOverlayDialog();
+    private static CoopOverlayDialog instance;
 
-    private boolean visible = false;
     private final GuiSection window;
     private final GPanel panel;
+    private final GuiSection content;
 
     private String notificationText = "";
     private double notificationTimer = 0;
 
+    public static synchronized CoopOverlayDialog getInstance() {
+        if (instance == null) {
+            instance = new CoopOverlayDialog();
+        }
+        return instance;
+    }
+
     private CoopOverlayDialog() {
+        super(false, false, true);
+
         window = new GuiSection();
 
         panel = new GPanel();
-        panel.setTitle("CO-OP SESSION CONTROLS");
-        panel.body().setDim(440, 320);
-        panel.body().centerIn(C.DIM());
+        panel.setTitle("CO-OP SESSION CONTROLS", UI.FONT().H2);
+        panel.body().setDim(480, 360);
+        panel.setCloseAction(new ACTION() {
+            @Override
+            public void exe() {
+                hide();
+            }
+        });
 
-        GuiSection content = new GuiSection();
-        content.body().moveX1(panel.body().x1() + 24);
-        content.body().moveY1(panel.body().y1() + 36);
+        content = new GuiSection();
 
-        // Status Information Rows
-        RENDEROBJ infoRow = new RENDEROBJ.RenderImp(400, 110) {
+        // 1. Status Information Rows
+        RENDEROBJ infoRow = new RENDEROBJ.RenderImp(430, 110) {
             @Override
             public void render(SPRITE_RENDERER r, float ds) {
                 CoopSessionManager sm = CoopSessionManager.getInstance();
@@ -64,7 +80,7 @@ public class CoopOverlayDialog {
         };
         content.addDown(0, infoRow);
 
-        // Host: Force Save Resync Button
+        // 2. Host: Force Save Resync Button
         GButt.Panel resyncButt = new GButt.Panel("Force Save Resync (All Clients)") {
             @Override
             public boolean activeIs() {
@@ -80,7 +96,7 @@ public class CoopOverlayDialog {
         });
         content.addDown(16, resyncButt);
 
-        // Host: Toggle Mode A / Mode B
+        // 3. Host: Toggle Mode A / Mode B
         GButt.Panel toggleModeButt = new GButt.Panel("Switch Mode A <-> Mode B") {
             @Override
             public boolean activeIs() {
@@ -101,7 +117,7 @@ public class CoopOverlayDialog {
         });
         content.addDown(8, toggleModeButt);
 
-        // Bottom Row: Disconnect & Close
+        // 4. Bottom Row: Disconnect & Close Buttons
         GuiSection bottomRow = new GuiSection();
 
         GButt.Panel disconnectButt = new GButt.Panel("Disconnect");
@@ -118,15 +134,15 @@ public class CoopOverlayDialog {
         closeButt.clickActionSet(new ACTION() {
             @Override
             public void exe() {
-                visible = false;
+                hide();
             }
         });
         bottomRow.addRight(16, closeButt);
 
         content.addDown(16, bottomRow);
 
-        // Notification Message
-        RENDEROBJ notifLabel = new RENDEROBJ.RenderImp(400, 24) {
+        // 5. Notification Message Label
+        RENDEROBJ notifLabel = new RENDEROBJ.RenderImp(430, 24) {
             @Override
             public void render(SPRITE_RENDERER r, float ds) {
                 if (notificationTimer > 0 && !notificationText.isEmpty()) {
@@ -142,20 +158,29 @@ public class CoopOverlayDialog {
         window.add(content);
     }
 
-    public static CoopOverlayDialog getInstance() {
-        return INSTANCE;
+    private void realign() {
+        panel.body().centerIn(C.DIM());
+        content.body().moveX1Y1(panel.body().x1() + 24, panel.body().y1() + 36);
     }
 
-    public boolean isVisible() {
-        return visible;
-    }
-
-    public void setVisible(boolean visible) {
-        this.visible = visible;
+    public void show() {
+        if (VIEW.inters() == null || VIEW.inters().manager == null) {
+            return;
+        }
+        realign();
+        super.show(VIEW.inters().manager);
     }
 
     public void toggle() {
-        this.visible = !this.visible;
+        if (isActivated()) {
+            hide();
+        } else {
+            show();
+        }
+    }
+
+    public void close() {
+        hide();
     }
 
     public void showNotification(String text) {
@@ -163,32 +188,49 @@ public class CoopOverlayDialog {
         this.notificationTimer = 4.0;
     }
 
-    public void update(double ds) {
-        if (notificationTimer > 0) {
-            notificationTimer -= ds;
-        }
-    }
-
-    public boolean hover(COORDINATE mCoo, boolean mouseHasMoved) {
-        if (!visible) return false;
+    @Override
+    protected boolean hover(COORDINATE mCoo, boolean mouseHasMoved) {
         return window.hover(mCoo) || mCoo.isWithinRec(panel.body());
     }
 
-    public boolean mouseClick(MButt button) {
-        if (!visible) return false;
+    @Override
+    protected void mouseClick(MButt button) {
         if (button == MButt.LEFT) {
-            return window.click();
+            window.click();
         } else if (button == MButt.RIGHT) {
-            visible = false;
+            hide();
+        }
+    }
+
+    @Override
+    protected boolean otherClick(MButt button) {
+        if (button == MButt.RIGHT) {
+            hide();
             return true;
         }
         return false;
     }
 
-    public void render(Renderer r, float ds) {
-        if (!visible) return;
+    @Override
+    protected void hoverTimer(GBox text) {
+        window.hoverInfoGet(text);
+    }
 
-        // Render modal window and widgets
+    @Override
+    protected boolean render(Renderer r, float ds) {
         window.render(r, ds);
+        return true;
+    }
+
+    @Override
+    protected boolean update(float ds) {
+        if (notificationTimer > 0) {
+            notificationTimer -= ds;
+        }
+        if (KEYS.MAIN().ESCAPE.consumeClick()) {
+            hide();
+            return false;
+        }
+        return true;
     }
 }

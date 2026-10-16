@@ -143,6 +143,10 @@ public class Menu extends CORE_STATE {
 			if (fadeLight > 1)
 				fadeLight = 1;
 		}
+
+		// [COOP-MOD START]
+		coop.net.CoopSessionManager.getInstance().update(ds);
+		// [COOP-MOD END]
 	}
 
 	@Override

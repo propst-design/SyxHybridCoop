@@ -38,6 +38,8 @@ public class CoopSessionManager {
     private volatile Role role = Role.NONE;
     private volatile SessionMode sessionMode = SessionMode.MODE_A_SHARED_CITY;
     private volatile SessionState sessionState = SessionState.IDLE;
+    private volatile boolean pendingSaveSync = false;
+    private double saveRequestRetryTimer = 0.0;
 
     private CoopTransport transport;
     private SaveStreamer.Receiver saveReceiver;
@@ -57,7 +59,7 @@ public class CoopSessionManager {
         String testRole = System.getProperty("coop.testRole");
 
         if ("HOST".equalsIgnoreCase(testRole)) {
-            int port = 27015;
+            int port = 27025;
             String portProp = System.getProperty("coop.port");
             if (portProp != null && !portProp.isEmpty()) {
                 try {
@@ -76,9 +78,9 @@ public class CoopSessionManager {
                 e.printStackTrace();
             }
         } else if ("CLIENT".equalsIgnoreCase(testRole)) {
-            String connectStr = System.getProperty("coop.connect", "127.0.0.1:27015");
+            String connectStr = System.getProperty("coop.connect", "127.0.0.1:27025");
             String host = "127.0.0.1";
-            int port = 27015;
+            int port = 27025;
             if (connectStr.contains(":")) {
                 String[] parts = connectStr.split(":", 2);
                 host = parts[0];
@@ -111,6 +113,7 @@ public class CoopSessionManager {
                 });
 
                 System.out.println("[CoopSessionManager] Initialized as CLIENT, connected to " + host + ":" + port);
+                sendSaveRequest();
             } catch (IOException e) {
                 System.err.println("[CoopSessionManager] Failed to connect to host at " + host + ":" + port + ": " + e.getMessage());
                 e.printStackTrace();
@@ -137,7 +140,9 @@ public class CoopSessionManager {
             if (packet.length == 0) continue;
 
             byte type = packet[0];
-            if (type == SaveStreamer.TYPE_SAVE_START || type == SaveStreamer.TYPE_SAVE_CHUNK || type == SaveStreamer.TYPE_SAVE_END) {
+            if (type == SaveStreamer.TYPE_SAVE_REQUEST) {
+                handleSaveRequest();
+            } else if (type == SaveStreamer.TYPE_SAVE_START || type == SaveStreamer.TYPE_SAVE_CHUNK || type == SaveStreamer.TYPE_SAVE_END) {
                 if (saveReceiver != null) {
                     saveReceiver.handlePacket(packet);
                 }
@@ -154,14 +159,55 @@ public class CoopSessionManager {
 
         // Mode B empire state broadcast update
         coop.world.FactionSyncService.getInstance().update(ds);
+
+        // Retry save request if client is waiting for initial settlement save
+        if (role == Role.CLIENT && sessionState == SessionState.HANDSHAKE_SYNC) {
+            saveRequestRetryTimer += ds;
+            if (saveRequestRetryTimer >= 2.5) {
+                saveRequestRetryTimer = 0.0;
+                if (saveReceiver == null || saveReceiver.getReceivedCount() == 0) {
+                    sendSaveRequest();
+                }
+            }
+        }
     }
 
     /**
      * Host triggers a save capture and streams it to all connected peers.
      */
     public void triggerHostSaveSync() {
+        pendingSaveSync = false;
         if (role == Role.HOST && transport != null && transport.isConnected()) {
             SaveStreamer.hostSaveAndStream(transport);
+        }
+    }
+
+    public void handleSaveRequest() {
+        if (!isHost()) {
+            return;
+        }
+        System.out.println("[CoopSessionManager] Host received TYPE_SAVE_REQUEST from peer.");
+        if (game.GAME.isGameLoaded()) {
+            System.out.println("[CoopSessionManager] Host game is loaded; streaming current settlement save...");
+            triggerHostSaveSync();
+        } else {
+            System.out.println("[CoopSessionManager] Host game not loaded yet; flagging pending save sync.");
+            pendingSaveSync = true;
+        }
+    }
+
+    public boolean hasPendingSaveSync() {
+        return pendingSaveSync;
+    }
+
+    public void sendSaveRequest() {
+        if (transport != null && transport.isConnected()) {
+            try {
+                transport.sendReliable(new byte[]{SaveStreamer.TYPE_SAVE_REQUEST});
+                System.out.println("[CoopSessionManager] Sent TYPE_SAVE_REQUEST to host.");
+            } catch (IOException e) {
+                System.err.println("[CoopSessionManager] Failed to send save request: " + e.getMessage());
+            }
         }
     }
 
@@ -256,6 +302,11 @@ public class CoopSessionManager {
         });
 
         System.out.println("[CoopSessionManager] Client connected to " + host + ":" + port);
+        sendSaveRequest();
+    }
+
+    public SaveStreamer.Receiver getSaveReceiver() {
+        return saveReceiver;
     }
 
     public int getConnectedPeerCount() {

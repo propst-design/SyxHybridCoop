@@ -69,7 +69,12 @@ public class CoopModScript implements SCRIPT {
 
         @Override
         public void update(double ds) {
-            CoopSessionManager.getInstance().update(ds);
+            CoopSessionManager sm = CoopSessionManager.getInstance();
+            sm.update(ds);
+            if (sm.hasPendingSaveSync()) {
+                System.out.println("[CoopModScript] Host game loaded; fulfilling pending save stream to waiting clients.");
+                sm.triggerHostSaveSync();
+            }
             hud.update(ds);
         }
 

@@ -4,6 +4,8 @@ import coop.net.CoopSessionManager;
 import coop.net.CoopSessionManager.Role;
 import init.constant.C;
 import init.sprite.UI.UI;
+import snake2d.CORE;
+import snake2d.KEYCODES;
 import snake2d.MButt;
 import snake2d.Renderer;
 import snake2d.util.color.COLOR;
@@ -20,6 +22,7 @@ public class CoopHudOverlay {
 
     private final Rec pillBody = new Rec(220, 26);
     private boolean hovered = false;
+    private boolean f8WasDown = false;
 
     public CoopHudOverlay() {
         updatePosition();
@@ -35,11 +38,20 @@ public class CoopHudOverlay {
 
     public void update(double ds) {
         updatePosition();
-        CoopOverlayDialog.getInstance().update(ds);
+
+        // Edge-triggered F8 shortcut to toggle the co-op session overlay
+        if (CORE.getInput().getKeyboard().isPressed(KEYCODES.KEY_F8)) {
+            if (!f8WasDown) {
+                f8WasDown = true;
+                toggleDialog();
+            }
+        } else {
+            f8WasDown = false;
+        }
     }
 
     public void render(Renderer r, float ds) {
-        // 1. Render HUD Pill
+        // Render HUD Pill
         GCOLOR.UI().bg(true, false, hovered).render(r, pillBody);
         GCOLOR.UI().border().renderFrame(r, pillBody, 0, 1);
 
@@ -61,35 +73,25 @@ public class CoopHudOverlay {
         textColor.bind();
         UI.FONT().S.render(r, text, pillBody.x1() + 10, pillBody.y1() + 5);
         COLOR.unbind();
-
-        // 2. Render Overlay Dialog if currently toggled open
-        CoopOverlayDialog.getInstance().render(r, ds);
     }
 
     public boolean hover(COORDINATE mCoo, boolean mouseHasMoved) {
-        if (CoopOverlayDialog.getInstance().hover(mCoo, mouseHasMoved)) {
-            return true;
-        }
         hovered = mCoo.isWithinRec(pillBody);
         return hovered;
     }
 
     public boolean mouseClick(MButt button) {
-        if (CoopOverlayDialog.getInstance().mouseClick(button)) {
-            return true;
-        }
-
         if (button == MButt.LEFT && hovered) {
-            CoopOverlayDialog.getInstance().toggle();
+            toggleDialog();
             return true;
         }
         return false;
     }
 
     public void keyPush(KEYS key) {
-        if (CoopOverlayDialog.getInstance().isVisible()) {
+        if (CoopOverlayDialog.getInstance().isActivated()) {
             if (KEYS.MAIN().ESCAPE.consumeClick()) {
-                CoopOverlayDialog.getInstance().setVisible(false);
+                CoopOverlayDialog.getInstance().close();
             }
         }
     }

@@ -399,6 +399,12 @@ public class GAME{
 	public static TextureHolder texture() {
 		return texture;
 	}
+
+	// [COOP-MOD START]
+	public static boolean isGameLoaded() {
+		return game != null && game.saver != null;
+	}
+	// [COOP-MOD END]
 	
 	public static NOBLES NOBLE() {
 		return game.nobilities;

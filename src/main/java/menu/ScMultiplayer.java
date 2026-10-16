@@ -30,7 +30,8 @@ public class ScMultiplayer implements SC {
     private final GuiSection current;
 
     private SessionMode selectedMode = SessionMode.MODE_A_SHARED_CITY;
-    private String statusMessage = "Ready";
+    private String hostStatus = "";
+    private String clientStatus = "";
 
     private final StringInputSprite hostPortInput;
     private final StringInputSprite clientIpInput;
@@ -86,7 +87,6 @@ public class ScMultiplayer implements SC {
             protected void clickA() {
                 if (selectedMode == SessionMode.MODE_A_SHARED_CITY) {
                     selectedMode = SessionMode.MODE_B_SHARED_WORLD;
-                    clickActionSet(null);
                 } else {
                     selectedMode = SessionMode.MODE_A_SHARED_CITY;
                 }
@@ -115,7 +115,7 @@ public class ScMultiplayer implements SC {
         hostCol.addDown(16, portLabel);
 
         hostPortInput = new StringInputSprite(8, UI.FONT().M);
-        hostPortInput.text().add("27015");
+        hostPortInput.text().add("27025");
         GInput hostPortGInput = new GInput(hostPortInput);
         hostCol.addDown(4, hostPortGInput);
 
@@ -124,17 +124,17 @@ public class ScMultiplayer implements SC {
         hostSaveButt.clickActionSet(new ACTION() {
             @Override
             public void exe() {
-                int port = parsePort(hostPortInput.text().toString(), 27015);
+                int port = parsePort(hostPortInput.text().toString(), 27025);
                 try {
                     CoopSessionManager.getInstance().startHost(port, selectedMode);
-                    statusMessage = "Host started on port " + port + ". Select a save to launch.";
+                    hostStatus = "Host started on port " + port + ". Select a save to launch.";
                     if (menu.load.hasSaves()) {
                         menu.load.loadSave();
                     } else {
-                        statusMessage = "No existing saves found. Please host a new game.";
+                        hostStatus = "No existing saves found. Please host a new game.";
                     }
                 } catch (IOException e) {
-                    statusMessage = "Failed to start host: " + e.getMessage();
+                    hostStatus = "Failed to start host: " + e.getMessage();
                 }
             }
         });
@@ -145,17 +145,30 @@ public class ScMultiplayer implements SC {
         hostNewButt.clickActionSet(new ACTION() {
             @Override
             public void exe() {
-                int port = parsePort(hostPortInput.text().toString(), 27015);
+                int port = parsePort(hostPortInput.text().toString(), 27025);
                 try {
                     CoopSessionManager.getInstance().startHost(port, selectedMode);
-                    statusMessage = "Host started on port " + port + ". Configuring new world...";
+                    hostStatus = "Host started on port " + port + ". Configuring new world...";
                     menu.switchScreen(menu.sandboxSettings);
                 } catch (IOException e) {
-                    statusMessage = "Failed to start host: " + e.getMessage();
+                    hostStatus = "Failed to start host: " + e.getMessage();
                 }
             }
         });
         hostCol.addDown(12, hostNewButt);
+
+        // Host Status Label
+        RENDEROBJ hostStatusLabel = new RENDEROBJ.RenderImp(480, 40) {
+            @Override
+            public void render(SPRITE_RENDERER r, float ds) {
+                if (!hostStatus.isEmpty()) {
+                    GCOLOR.T().HOVERED.bind();
+                    UI.FONT().S.render(r, "Host Status: " + hostStatus, body().x1(), body().y1());
+                    COLOR.unbind();
+                }
+            }
+        };
+        hostCol.addDown(16, hostStatusLabel);
 
         screen.add(hostCol);
 
@@ -202,7 +215,7 @@ public class ScMultiplayer implements SC {
         joinCol.addDown(16, clientPortLabel);
 
         clientPortInput = new StringInputSprite(8, UI.FONT().M);
-        clientPortInput.text().add("27015");
+        clientPortInput.text().add("27025");
         GInput clientPortGInput = new GInput(clientPortInput);
         joinCol.addDown(4, clientPortGInput);
 
@@ -212,8 +225,8 @@ public class ScMultiplayer implements SC {
             @Override
             public void exe() {
                 final String host = clientIpInput.text().toString().trim();
-                final int port = parsePort(clientPortInput.text().toString(), 27015);
-                statusMessage = "Connecting to " + host + ":" + port + "...";
+                final int port = parsePort(clientPortInput.text().toString(), 27025);
+                clientStatus = "Connecting to " + host + ":" + port + "...";
 
                 new Thread(new Runnable() {
                     @Override
@@ -222,18 +235,18 @@ public class ScMultiplayer implements SC {
                             CoopSessionManager.getInstance().connectClient(host, port, new SaveStreamer.SaveTransferCallback() {
                                 @Override
                                 public void onSaveReceived(Path savedFile) {
-                                    statusMessage = "Save received! Launching game...";
+                                    clientStatus = "Save received! Launching game...";
                                     new game.save.GameLoader(savedFile).set();
                                 }
 
                                 @Override
                                 public void onError(String message, Throwable cause) {
-                                    statusMessage = "Sync error: " + message;
+                                    clientStatus = "Sync error: " + message;
                                 }
                             });
-                            statusMessage = "Connected! Awaiting settlement save from host...";
+                            clientStatus = "Connected! Awaiting settlement save from host...";
                         } catch (Exception e) {
-                            statusMessage = "Connection failed: " + e.getMessage();
+                            clientStatus = "Connection failed: " + e.getMessage();
                         }
                     }
                 }).start();
@@ -241,16 +254,26 @@ public class ScMultiplayer implements SC {
         });
         joinCol.addDown(24, connectButt);
 
-        // Status Label
-        RENDEROBJ statusLabel = new RENDEROBJ.RenderImp(480, 32) {
+        // Client Status Label
+        RENDEROBJ clientStatusLabel = new RENDEROBJ.RenderImp(480, 40) {
             @Override
             public void render(SPRITE_RENDERER r, float ds) {
-                GCOLOR.T().CLICKABLE.bind();
-                UI.FONT().S.render(r, "Status: " + statusMessage, body().x1(), body().y1());
-                COLOR.unbind();
+                SaveStreamer.Receiver recv = CoopSessionManager.getInstance().getSaveReceiver();
+                if (recv != null && recv.getExpectedChunks() > 0) {
+                    int pct = recv.getProgressPercent();
+                    int cur = recv.getReceivedCount();
+                    int total = recv.getExpectedChunks();
+                    GCOLOR.T().CLICKABLE.bind();
+                    UI.FONT().S.render(r, "Receiving settlement save: " + cur + "/" + total + " chunks (" + pct + "%)", body().x1(), body().y1());
+                    COLOR.unbind();
+                } else if (!clientStatus.isEmpty()) {
+                    GCOLOR.T().CLICKABLE.bind();
+                    UI.FONT().S.render(r, "Client Status: " + clientStatus, body().x1(), body().y1());
+                    COLOR.unbind();
+                }
             }
         };
-        joinCol.addDown(20, statusLabel);
+        joinCol.addDown(16, clientStatusLabel);
 
         screen.add(joinCol);
 
