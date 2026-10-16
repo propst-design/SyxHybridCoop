@@ -52,8 +52,15 @@ A unified multiplayer and co-op mod for **Songs of Syx** (`v0.71.44`), supportin
 ### Manual Installation
 1. Download `SyxHybridCoop.zip` from the [Latest Release](https://github.com/propst-design/SyxHybridCoop/releases).
 2. Extract the `SyxHybridCoop` folder into your Songs of Syx mods directory:
-   - **Windows**: `%APPDATA%\songsofsyx\mods\`
+   - **Windows**: `%APPDATA%\songsofsyx\mods\` (Paste into Explorer address bar)
    - **macOS**: `~/Library/Application Support/songsofsyx/mods/`
+     > **Tip for Mac users**: macOS hides the `~/Library` folder by default.
+     > - **Quickest Method**: Open **Terminal** and run:
+     >   ```bash
+     >   mkdir -p ~/Library/Application\ Support/songsofsyx/mods
+     >   open ~/Library/Application\ Support/songsofsyx/mods
+     >   ```
+     > - **In Finder**: Press <kbd>Cmd</kbd> + <kbd>Shift</kbd> + <kbd>G</kbd>, paste `~/Library/Application Support/songsofsyx/mods/`, and press <kbd>Return</kbd>.
    - **Linux**: `~/.local/share/songsofsyx/mods/`
 3. Launch Songs of Syx, click the mod manager on the launcher, and ensure **Syx Hybrid Co-Op** is enabled.
 
