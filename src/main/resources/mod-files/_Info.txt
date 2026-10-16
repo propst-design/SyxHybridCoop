@@ -1,0 +1,6 @@
+VERSION: "0.1.0",
+NAME: "Syx Hybrid Co-Op",
+DESC: "Shared-City lockstep co-op and Shared-World multi-city multiplayer for Songs of Syx V71.",
+AUTHOR: "wrrr0",
+INFO: "Supports Mode A (Shared-City Co-Rulers) and Mode B (Shared-World Empires & Live Battles).",
+TEXTURE_CACHE_SIZE: 4096,

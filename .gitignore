@@ -1,0 +1,28 @@
+# Build artifacts
+target/
+*.class
+
+# Vanilla game reference source (proprietary game code extracted locally)
+vendor/
+
+# Runtime test files and logs
+logs/
+*.log
+error*.txt
+saves_client/
+*.save
+*.tmp
+127.0.0.1*
+
+# IDE and Editor files
+.idea/
+.vscode/
+*.iml
+.settings/
+.classpath
+.project
+
+# OS files
+Thumbs.db
+.DS_Store
+desktop.ini
