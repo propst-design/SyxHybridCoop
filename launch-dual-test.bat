@@ -3,13 +3,13 @@ setlocal EnableDelayedExpansion
 
 :: ============================================================================
 :: Songs of Syx (v0.71.44) — Single-PC Dual-Instance Multiplayer Test Launcher
-:: Project Root : %USERPROFILE%\Documents\Songs of Syx MP Mod
+:: Project Root : directory containing this launcher
 :: Game Root    : F:\SteamLibrary\steamapps\common\Songs of Syx
 :: ============================================================================
 
-set "PROJECT_DIR=%USERPROFILE%\Documents\Songs of Syx MP Mod"
+set "PROJECT_DIR=%~dp0."
 set "GAME_DIR=F:\SteamLibrary\steamapps\common\Songs of Syx"
-set "APPDATA_SYX=%USERPROFILE%\AppData\Roaming\songsofsyx"
+set "APPDATA_SYX=%APPDATA%\songsofsyx"
 set "MOD_JAR=%APPDATA_SYX%\mods\SyxHybridCoop\V71\script\SyxHybridCoop.jar"
 set "GAME_JAR=%GAME_DIR%\SongsOfSyx.jar"
 set "JAVA_EXE=%GAME_DIR%\jre\bin\java.exe"

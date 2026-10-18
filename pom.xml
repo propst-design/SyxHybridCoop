@@ -23,10 +23,10 @@
         <mod.folder.name>SyxHybridCoop</mod.folder.name>
         <mod.jar.name>SyxHybridCoop</mod.jar.name>
 
-        <!-- Local Machine Paths for wrrr0 -->
+        <!-- Local paths; override game.installation.directory for your Steam library -->
         <game.installation.directory>F:\SteamLibrary\steamapps\common\Songs of Syx</game.installation.directory>
-        <game.mod.directory>%USERPROFILE%\AppData\Roaming\songsofsyx\mods</game.mod.directory>
-        <game.mod.uploader.directory>%USERPROFILE%\AppData\Roaming\songsofsyx\mods-uploader</game.mod.uploader.directory>
+        <game.mod.directory>${env.APPDATA}/songsofsyx/mods</game.mod.directory>
+        <game.mod.uploader.directory>${env.APPDATA}/songsofsyx/mods-uploader</game.mod.uploader.directory>
 
         <!-- Staging path inside target/ -->
         <mod.staging.dir>${project.build.directory}/out/${mod.folder.name}</mod.staging.dir>
